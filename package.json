@@ -1,0 +1,18 @@
+{
+    "name": "skeleton",
+    "version": "1.0.0",
+    "description": "project using gulp4",
+    "author": "Medov Sergei",
+    "devDependencies": {},
+    "dependencies": {
+        "core-util-is": "^1.0.2",
+        "domurl": "^2.2.0",
+        "ejs": "^2.6.2",
+        "express": "^4.17.1",
+        "json": "^9.0.6",
+        "node-telegram-bot-api": "^0.30.0",
+        "pjson": "^1.0.9",
+        "pug": "^2.0.4",
+        "request": "^2.88.0"
+    }
+}
