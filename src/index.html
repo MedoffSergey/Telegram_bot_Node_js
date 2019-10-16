@@ -8,3 +8,47 @@
     <h1> Привет Мир </h1>
   </body>
 </html>
+
+
+<!-- const express = require('express');
+const app = express();
+const url = require('url');
+
+//telegram-bot-api
+const TelegramBot = require('node-telegram-bot-api');
+const request = require('request');
+const token = '725276890:AAFZsqsDgLvLfhgY8t-9lhjhCN-ZwAazqUM';
+
+//PROXY
+const bot = new TelegramBot(token, {
+  polling: true,
+  request: {
+    proxy:"http://116.203.127.92:3128"
+  }});
+
+  bot.onText(/\/start/, (msg) => {
+
+  bot.sendMessage(msg.chat.id, "Welcome", {
+  "reply_markup": {
+      "keyboard": [["First name", "Last name"]]
+      }
+  });
+
+  });
+
+  bot.on('message', (msg) => {
+    var firstName = "First name";
+    if (msg.text.indexOf(firstName) === 0) {
+      bot.sendMessage(msg.chat.id, "Ваше Имя " + msg.from.first_name);
+    }
+    var lastName = "Last name";
+    if (msg.text.indexOf(lastName) === 0) {
+      bot.sendMessage(msg.chat.id, "Ваша фамилия " + msg.from.last_name);
+    }
+  });
+
+
+// запускаем новый HTTP-сервер на порту 3000
+app.listen(3000, function () {
+  console.log('Сервер работает на порту : 3000!');
+}); -->
