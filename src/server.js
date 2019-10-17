@@ -25,7 +25,8 @@ var questions = [{
   ]
 }];
 
-function newQuestion(msg) {
+
+function newQuestion() {
   var arr = questions[0];
   var text = arr.title;
   var options = {
@@ -33,16 +34,15 @@ function newQuestion(msg) {
       inline_keyboard: arr.buttons
     })
   };
-  chat = msg.hasOwnProperty('chat') ? msg.chat.id : msg.from.id;
-  console.log(options)
-  bot.sendMessage(chat, text, options);
-
+  bot.sendMessage(311805730, text, options);
 }
 
-bot.onText(/\/start/, function(msg, match) {
-  newQuestion(msg);
-});
+newQuestion();
 
-bot.on('callback_query', function(msg) {
-  bot.sendMessage(msg.from.id, msg.from.first_name + ' ' + msg.from.last_name);
-});
+bot.on('callback_query', msg => {
+    bot.editMessageText(msg.message.text+' '+ msg.from.first_name + ' ' + msg.from.last_name,  {
+                chat_id: msg.from.id,
+                message_id: msg.message.message_id
+            })
+
+})
