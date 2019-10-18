@@ -9,8 +9,7 @@
   </body>
 </html>
 
-
-<!-- const express = require('express');
+const express = require('express');
 const app = express();
 const url = require('url');
 
@@ -23,32 +22,155 @@ const token = '725276890:AAFZsqsDgLvLfhgY8t-9lhjhCN-ZwAazqUM';
 const bot = new TelegramBot(token, {
   polling: true,
   request: {
-    proxy:"http://116.203.127.92:3128"
-  }});
+    proxy: "http://194.26.180.142:3128"
+  }
+});
 
-  bot.onText(/\/start/, (msg) => {
+var questions = [{
+  title: 'Кто нажал на эту кнопку?',
+  buttons: [
+    [{
+      text: 'click me',
+      callback_data: '1'
+    }]
+  ]
+}];
 
-  bot.sendMessage(msg.chat.id, "Welcome", {
-  "reply_markup": {
-      "keyboard": [["First name", "Last name"]]
-      }
-  });
 
-  });
+function newQuestion() {
+  var arr = questions[0];
+  var text = arr.title;
+  var options = {
+    reply_markup: JSON.stringify({
+      inline_keyboard: arr.buttons
+    })
+  };
+  bot.sendMessage(-276583637, text, options);
+}
 
-  bot.on('message', (msg) => {
-    var firstName = "First name";
-    if (msg.text.indexOf(firstName) === 0) {
-      bot.sendMessage(msg.chat.id, "Ваше Имя " + msg.from.first_name);
+newQuestion();
+
+bot.on('callback_query', msg => {
+    bot.editMessageText(msg.message.text+' '+ msg.from.first_name + ' ' + msg.from.last_name,  {
+                chat_id: -276583637,
+                message_id: msg.message.message_id
+            })
+
+})
+
+let preRating = [ ];
+
+bot.onText(/.+/, function(msg, match) {
+    if(msg.reply_to_message && msg.text === "+" || msg.text.toLowerCase() === "спасибо")
+    {
+      console.log(msg.reply_to_message)
+      preRating.push( msg.reply_to_message.from.first_name)
     }
-    var lastName = "Last name";
-    if (msg.text.indexOf(lastName) === 0) {
-      bot.sendMessage(msg.chat.id, "Ваша фамилия " + msg.from.last_name);
+});
+
+function countPlus(preRating) {
+    let finalRating = [];
+    for (let i=0; i<preRating.length; i++) {
+        if (finalRating[preRating[i]] === undefined) {
+            finalRating[preRating[i]] = 1;
+        } else {
+            finalRating[preRating[i]]++;
+        }
     }
-  });
+    return finalRating
+}
 
 
-// запускаем новый HTTP-сервер на порту 3000
-app.listen(3000, function () {
-  console.log('Сервер работает на порту : 3000!');
-}); -->
+// bot.onText(/\/rating/, function(msg, match) {
+//   let result =  preRating
+//   let like = 0
+//     for (let i=0; i<result.length; i++) {
+//       like = result[i]
+//     }
+// });
+
+
+// bot.onText(/\/rating/, function onLoveText(msg) {
+//     console.log(1)
+//     let result = countPlus(preRating).sort(function(a, b) {
+//         return b - a;
+//     });
+//     console.log(1, result)
+//     for (let i=0; i<result.length; i++) {
+//         bot.sendMessage(msg.chat.id, i +' место', result[i]);
+//     }
+// })
+
+bot.onText(/\/rating/, function onLoveText(msg) {
+    let result = [];
+    for (let name in countPlus(preRating)) {
+        result.push([name, countPlus(preRating)[name]]);
+    }
+    result.sort(function(a, b) {
+        return a[1] - b[1];
+    });
+    console.log(result)
+    for (let i=0; i<result.length; i++) {
+        bot.sendMessage(msg.chat.id, i+1 +' место - '+ result[i] + " 💛 ");
+    }
+})
+
+
+
+////////////////////////////////////////
+bot.onText(/.+/, function(msg, match) {
+    pushInArray(msg)
+    console.log(msg)
+})
+    // .then(result => {
+    // console.log(result)})
+
+let preRating = [ ];
+
+function pushInArray(msg) {
+    console.log("Команда сработала на ", msg.text)
+    if (
+        msg.reply_to_message.from.is_bot === false &&
+        msg.text === "+" || msg.text.toLowerCase() === "спасибо"
+    ) {
+        console.log("Добавлен", msg.reply_to_message.from.first_name)
+        preRating.push(msg.reply_to_message.from.first_name)
+    }
+
+}
+
+
+function countPlus(preRating) {
+    let finalRating = {};
+    for (let i=0; i<preRating.length; i++) {
+        if (finalRating[preRating[i]] === undefined) {
+            finalRating[preRating[i]] = 1;
+        } else {
+            finalRating[preRating[i]]++;
+        }
+    }
+    console.log("Сумма",finalRating)
+    return finalRating
+}
+
+
+bot.onText(/\/start/, function onLoveText(msg) {
+    console.log("Команда старт сработала")
+    let ogject = countPlus(preRating)
+    console.log(ogject)
+    let result = [];
+    for (let name in ogject) {
+        result.push([name, ogject[name]]);
+    }
+    result.sort(function(a, b) {
+        return b[1] - a[1];
+    });
+    // let result = countPlus(preRating).sort(function(a, b) {
+    //     return b - a;
+    // });
+    console.log("Конечный результат", result)
+    for (let i=0; i<result.length; i++) {
+        bot.sendMessage(msg.chat.id, i+1 +' место '+ result[i][0] + " - " + result[i][1] +  " голоса");
+        // i+1 +' место - '+ result[i] + " голоса"
+    }
+})
