@@ -11,25 +11,48 @@ const bot = new TelegramBot(token, {
 });
 
 function newQuestion() {
-  bot.sendMessage(-276583637, 'Работяга john вышел на работу');
+  bot.sendMessage(-276583637, 'Работяга john вышел на работу');//связываем бота с чатом
 }
 newQuestion();
 
+
 let like = [];
 let dislike = []
+let ratingController = {};
+
+function canUserVote (user, date) {
+  console.log('ratingController[user]',ratingController.id)
+    if (!ratingController.id) {
+            console.log("Этот пользователь ещё не голосовал");
+            return true
+    } else {
+        if (ratingController.lastMessage + 30 <= date) {
+            console.log("Вы смогли еще раз проголосовать");
+            return true
+        } else {
+            console.log("Вы не можете ещё голосовать", ratingController.lastMessage + 30 - date, "секунд");
+            return false
+        }
+    }
+}
+
 
 bot.onText(/.+/, function(msg, match) {
-  if (msg.reply_to_message && msg.from.id != msg.reply_to_message.from.id && match[0] === "+" ||
-    match[0].toLowerCase() === "спасибо" || match[0].toLowerCase() === "спс" || match[0] === "👍") {
-    like.push(msg.reply_to_message.from.first_name)
+  let answer = msg.reply_to_message
+  let conditions1 = answer && msg.from.id != answer.from.id
+  let textLowerCase = msg.text.toLowerCase()
+
+  if ((conditions1) && (msg.text === "+" || textLowerCase === "спасибо" || textLowerCase === "спс" || msg.text === "👍") && canUserVote(msg.from.id,msg.date)) {
+    ratingController = { id: msg.from.id , lastMessage: msg.date}
+    like.push(answer.from.first_name);
   }
-  else if (msg.reply_to_message && msg.from.id != msg.reply_to_message.from.id && match[0] === "-" ||
-    match[0].toLowerCase() === "дизлайк" || match[0].toLowerCase() === "нет" || match[0] === "👎") {
-    dislike.push(msg.reply_to_message.from.first_name)
+  if ((conditions1) && (msg.text === "-" || textLowerCase === "дизлайк" || textLowerCase === "нет" || msg.text === "👎") && canUserVote(msg.from.id,msg.date)) {
+    ratingController = { id: msg.from.id , lastMessage: msg.date}
+    dislike.push(answer.from.first_name)
   }
 })
 
-function countPlus(like, dislike) {
+function countFunc(like, dislike) {//функция подсчета лайков и дизлайков
   let finalRating = {};
 
   for (let i = 0; i < like.length; i++) {
@@ -46,14 +69,16 @@ function countPlus(like, dislike) {
       finalRating[dislike[i]]--;
     }
   }
-  console.log(finalRating)
-  return finalRating
+
+  return finalRating //возвращаем результат подсчета лайков и дизлайков
 }
 
+bot.onText(/\/history/,function showHistory(msg) {
+  console.log(msg)
+})
 
-bot.onText(/\/rating/, function showRating(msg) {
-
-  let object = countPlus(like, dislike)
+bot.onText(/\/rating/, function showRating(msg) { // вывод полученных данных в телеграмме по команде /rating
+  let object = countFunc (like, dislike)
   let result = [];
   for (let name in object) {
     result.push([name, object[name]]);
@@ -67,5 +92,6 @@ bot.onText(/\/rating/, function showRating(msg) {
     message += i + 1 + ' место ' + result[i][0] + " : " + result[i][1] + " 💙 \n";
   }
 
+  console.log(message)
   bot.sendMessage(msg.chat.id, message)
 })
