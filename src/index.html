@@ -174,3 +174,13 @@ bot.onText(/\/start/, function onLoveText(msg) {
         // i+1 +' место - '+ result[i] + " голоса"
     }
 })
+
+
+historyArr.push({
+   first_name: msg.from.first_name ,
+   last_name: msg.from.last_name,
+   date: msg.date,
+   reply_first_name: msg.reply_to_message.from.first_name,
+   reply_message :msg.reply_to_message.chat.text,
+   msg_text: msg.text
+})
