@@ -1,7 +1,9 @@
 const TelegramBot = require('node-telegram-bot-api');
+const formidable = require('formidable');
 const request = require('request');
-const token = '725276890:AAFZsqsDgLvLfhgY8t-9lhjhCN-ZwAazqUM';
+const fs = require('fs')
 
+const token = '725276890:AAFZsqsDgLvLfhgY8t-9lhjhCN-ZwAazqUM';
 //PROXY
 const bot = new TelegramBot(token, {
   polling: true
@@ -120,3 +122,16 @@ bot.onText(/\/rating/, function showRating(msg) { // вывод полученн
   console.log(message)
   bot.sendMessage(msg.chat.id, message)
 })
+
+bot.onText(/http.+/, async (msg) => {
+  let link = msg.text;
+  console.log(link)
+  try { await sendDocument({id: msg.chat.id, url: link})}
+  catch (err) {bot.sendMessage(msg.chat.id,err)}
+
+})
+
+// bot.on('text',async (ctx) => {
+//   try { await ctx.replyWithDocument({url:ctx.message.text, filename: 'test.txt'})}
+//   catch (err) {ctx.reply('Wrong link')}
+// })
