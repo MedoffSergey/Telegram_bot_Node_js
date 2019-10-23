@@ -26,11 +26,11 @@ function canUserVote(user, date) {
     console.log("Этот пользователь ещё не голосовал");
     return true
   } else {
-    if (ratingController.lastMessage + 30 <= date) {
+    if (ratingController.lastMessage + 10 <= date) {
       console.log("Вы смогли еще раз проголосовать");
       return true
     } else {
-      console.log("Вы не можете ещё голосовать", ratingController.lastMessage + 30 - date, "секунд");
+      console.log("Вы не можете ещё голосовать", ratingController.lastMessage + 10 - date, "секунд");
       return false
     }
   }
@@ -50,7 +50,7 @@ bot.onText(/.+/, function(msg, match) {
       reply_first_name: msg.reply_to_message.from.first_name,
       reply_message: msg.reply_to_message.text,
       msg_text: msg.text,
-      my_id: msg.from.id
+      my_id: msg.reply_to_message.from.id
     })
     ratingController = {
       id: msg.from.id,
@@ -59,6 +59,7 @@ bot.onText(/.+/, function(msg, match) {
     like.push(answer.from.first_name);
   }
   if ((conditions1) && (msg.text === "-" || textLowerCase === "дизлайк" || textLowerCase === "нет" || msg.text === "👎") && canUserVote(msg.from.id, msg.date)) {
+    console.log( msg.reply_to_message.from.id)
     historyArr.push({
       emotions: "Отрицательно",
       first_name: msg.from.first_name,
@@ -67,7 +68,7 @@ bot.onText(/.+/, function(msg, match) {
       reply_first_name: msg.reply_to_message.from.first_name,
       reply_message: msg.reply_to_message.text,
       msg_text: msg.text,
-      my_id: msg.from.id
+      my_id: msg.reply_to_message.from.id
     })
     ratingController = {
       id: msg.from.id,
@@ -122,17 +123,22 @@ bot.onText(/\/rating/, function showRating(msg) { // вывод полученн
       for (let i = 0; i < result.length; i++) {
         message += i + 1 + ' место ' + result[i][0] + " : " + result[i][1] + " 💙 \n";
       }
-  console.log(message)
+
   bot.sendMessage(msg.chat.id, message)
 })
 
 
 bot.onText(/\/status/, function showRating(msg) {
-  let count = 0;
+let count = 0
   for (let i = 0; i<historyArr.length;i++){
-    // if()
-    console.log(msg.from.id,historyArr[i].my_id)
+    if(msg.from.id === historyArr[i].my_id){
+      if (historyArr[i].emotions === 'Положительно') count++;
+      else count --
+    }
   }
+  if(count < 0 ) bot.sendMessage(msg.chat.id , "Вас недооценивают милорд")
+  else if(count == 0 ) bot.sendMessage(msg.chat.id , "Вы явно новичок")
+  else bot.sendMessage(msg.chat.id , "Вы популярны милорд")
 })
 
 bot.onText(/http.+/, async (msg) => {
@@ -144,7 +150,7 @@ bot.onText(/http.+/, async (msg) => {
     directory: "/home/smedov/Work/Download",
     filename: fileName
   }
-  console.log("URL: ", url, options.directory, options.filename)
+  //console.log("URL: ", url, options.directory, options.filename)
   download(url, options, async function(err) {
     if (err) throw err;
     else await bot.sendDocument(msg.chat.id, options.directory + '/' + fileName)
