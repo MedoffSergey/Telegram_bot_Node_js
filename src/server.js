@@ -1,76 +1,72 @@
-const TelegramBot = require('node-telegram-bot-api');
-const request = require('request');
-const fs = require('fs-extra')
-const http = require('http');
-const download = require('download-file')
+// Подключение модулей
+const telegramBot = require('node-telegram-bot-api'); // Модуль бота
+const fs = require('fs-extra') // Улучшенный модуль fs для работы с файлами
+const download = require('download-file') // Модуль для скачивания файлов по URL
 
-const token = '725276890:AAFZsqsDgLvLfhgY8t-9lhjhCN-ZwAazqUM';
-//PROXY
-const bot = new TelegramBot(token, {
-  polling: true
+const token = '725276890:AAFZsqsDgLvLfhgY8t-9lhjhCN-ZwAazqUM'; //Token Телеграм бота @ToTakeURL_bot
+
+const bot = new telegramBot(token, { // Запишем бота в переменную для дальнейшего обращения к нему
+  polling: true // Бот должен стараться не прекращать работу при возникновении каких-либо ошибок
 });
 
-function newQuestion() {
-  bot.sendMessage(-276583637, 'Работяга john вышел на работу'); //связываем бота с чатом
+function linkToChat() { // Функция cвязываем бота с чатом
+  bot.sendMessage(-276583637, 'Работяга john вышел на работу'); // Отправим боту сообщение о начале работ
 }
-newQuestion();
 
-let like = [];
-let dislike = [];
-let historyArr = [];
+linkToChat();
+// Глобальные переменные для хранения в них данных
+let like = [];                // Массив для хранения лайков
+let dislike = [];             // Массив для хранения дизлайков
+let historyArr = [];          // Массив для хранения истории уведомлений
 let ratingController = {};
 
-function canUserVote(user, date) {
-  console.log('ratingController[user]', ratingController.id)
-  if (!ratingController.id) {
+function canUserVote(user, date) { // Функция проверки может ли пользователь проголосовать
+  if (!ratingController.id) { // Если пользователь еще не голосовал то пусть голосует
     console.log("Этот пользователь ещё не голосовал");
     return true
+  } else if (ratingController.lastMessage + 10 <= date) { // Если с момента последнего голосования прошло n секунд то пусть голосует еще
+    console.log("Вы смогли еще раз проголосовать");
+    return true
   } else {
-    if (ratingController.lastMessage + 10 <= date) {
-      console.log("Вы смогли еще раз проголосовать");
-      return true
-    } else {
-      console.log("Вы не можете ещё голосовать", ratingController.lastMessage + 10 - date, "секунд");
-      return false
-    }
+    console.log("Вы не можете ещё голосовать", ratingController.lastMessage + 10 - date, "секунд"); // Если с момента последнего
+    return false // голосования не прошло n секунд пользователь не может голосовать
   }
 }
 
-bot.onText(/.+/, function(msg, match) {
+bot.onText(/.+/, function(msg, match) {       // Отслеживаем все сообщения полученные в чате
   let answer = msg.reply_to_message
-  let conditions1 = answer && msg.from.id != answer.from.id
+  let conditions1 = answer && msg.from.id != answer.from.id // (условие)Если ответ есть и ваш id != id ответа
   let textLowerCase = msg.text.toLowerCase()
 
   if ((conditions1) && (msg.text === "+" || textLowerCase === "спасибо" || textLowerCase === "спс" || msg.text === "👍") && canUserVote(msg.from.id, msg.date)) {
-    historyArr.push({
+    historyArr.push({ // Пушим в массив истории кто кого лайкнул
       emotions: "Положительно",
       first_name: msg.from.first_name,
       last_name: msg.from.last_name,
       date: msg.date,
-      reply_first_name: msg.reply_to_message.from.first_name,
-      reply_message: msg.reply_to_message.text,
+      reply_first_name: answer.from.first_name,
+      reply_message: answer.text,
       msg_text: msg.text,
-      my_id: msg.reply_to_message.from.id
+      answer_id: answer.from.id
     })
-    ratingController = {
+    ratingController = { // переопределим свойства обьекта
       id: msg.from.id,
       lastMessage: msg.date
     }
     like.push(answer.from.first_name);
   }
   if ((conditions1) && (msg.text === "-" || textLowerCase === "дизлайк" || textLowerCase === "нет" || msg.text === "👎") && canUserVote(msg.from.id, msg.date)) {
-    console.log( msg.reply_to_message.from.id)
-    historyArr.push({
+    historyArr.push({ // Пушим в массив истории кто кого дизлайкнул
       emotions: "Отрицательно",
       first_name: msg.from.first_name,
       last_name: msg.from.last_name,
       date: msg.date,
-      reply_first_name: msg.reply_to_message.from.first_name,
-      reply_message: msg.reply_to_message.text,
+      reply_first_name: answer.from.first_name,
+      reply_message: answer.text,
       msg_text: msg.text,
-      my_id: msg.reply_to_message.from.id
+      answer_id: answer.from.id
     })
-    ratingController = {
+    ratingController = { // переопределим свойства обьекта
       id: msg.from.id,
       lastMessage: msg.date
     }
@@ -87,7 +83,8 @@ function countFunc(like, dislike) { //функция подсчета лайко
     } else {
       finalRating[like[i]]++;
     }
-  };
+  }
+
   for (let i = 0; i < dislike.length; i++) {
     if (finalRating[dislike[i]] === undefined) {
       finalRating[dislike[i]] = -1;
@@ -95,7 +92,6 @@ function countFunc(like, dislike) { //функция подсчета лайко
       finalRating[dislike[i]]--;
     }
   }
-
   return finalRating //возвращаем результат подсчета лайков и дизлайков
 }
 
@@ -123,23 +119,27 @@ bot.onText(/\/rating/, function showRating(msg) { // вывод полученн
       for (let i = 0; i < result.length; i++) {
         message += i + 1 + ' место ' + result[i][0] + " : " + result[i][1] + " 💙 \n";
       }
-
+    if(message.length==0) {
+      bot.sendMessage(msg.chat.id, "Рейтинг пуст")
+      return
+    }
   bot.sendMessage(msg.chat.id, message)
 })
 
 
 bot.onText(/\/status/, function showRating(msg) {
-let count = 0
-  for (let i = 0; i<historyArr.length;i++){
-    if(msg.from.id === historyArr[i].my_id){
+  let count = 0;                                            //переменная для подсчета обшего рейтинга пользователя
+  for (let i = 0; i < historyArr.length; i++) {
+    if (msg.from.id === historyArr[i].answer_id) {
       if (historyArr[i].emotions === 'Положительно') count++;
-      else count --
+      else count--
     }
   }
-  if(count < 0 ) bot.sendMessage(msg.chat.id , "Вас недооценивают милорд")
-  else if(count == 0 ) bot.sendMessage(msg.chat.id , "Вы явно новичок")
-  else bot.sendMessage(msg.chat.id , "Вы популярны милорд")
+  if (count < 0) bot.sendMessage(msg.chat.id, "Вас недооценивают милорд")
+  else if (count == 0) bot.sendMessage(msg.chat.id, "Вы явно новичок")
+  else bot.sendMessage(msg.chat.id, "Вы популярны милорд")
 })
+
 
 bot.onText(/http.+/, async (msg) => {
   let url = msg.text;
