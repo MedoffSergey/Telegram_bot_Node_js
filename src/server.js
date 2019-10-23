@@ -1,7 +1,8 @@
 const TelegramBot = require('node-telegram-bot-api');
-const formidable = require('formidable');
 const request = require('request');
-const fs = require('fs')
+const fs = require('fs-extra')
+const http = require('http');
+const download = require('download-file')
 
 const token = '725276890:AAFZsqsDgLvLfhgY8t-9lhjhCN-ZwAazqUM';
 //PROXY
@@ -15,8 +16,8 @@ function newQuestion() {
 newQuestion();
 
 let like = [];
-let dislike = []
-let historyArr = []
+let dislike = [];
+let historyArr = [];
 let ratingController = {};
 
 function canUserVote(user, date) {
@@ -48,7 +49,8 @@ bot.onText(/.+/, function(msg, match) {
       date: msg.date,
       reply_first_name: msg.reply_to_message.from.first_name,
       reply_message: msg.reply_to_message.text,
-      msg_text: msg.text
+      msg_text: msg.text,
+      my_id: msg.from.id
     })
     ratingController = {
       id: msg.from.id,
@@ -64,7 +66,8 @@ bot.onText(/.+/, function(msg, match) {
       date: msg.date,
       reply_first_name: msg.reply_to_message.from.first_name,
       reply_message: msg.reply_to_message.text,
-      msg_text: msg.text
+      msg_text: msg.text,
+      my_id: msg.from.id
     })
     ratingController = {
       id: msg.from.id,
@@ -123,15 +126,27 @@ bot.onText(/\/rating/, function showRating(msg) { // вывод полученн
   bot.sendMessage(msg.chat.id, message)
 })
 
-bot.onText(/http.+/, async (msg) => {
-  let link = msg.text;
-  console.log(link)
-  try { await sendDocument({id: msg.chat.id, url: link})}
-  catch (err) {bot.sendMessage(msg.chat.id,err)}
 
+bot.onText(/\/status/, function showRating(msg) {
+  let count = 0;
+  for (let i = 0; i<historyArr.length;i++){
+    // if()
+    console.log(msg.from.id,historyArr[i].my_id)
+  }
 })
 
-// bot.on('text',async (ctx) => {
-//   try { await ctx.replyWithDocument({url:ctx.message.text, filename: 'test.txt'})}
-//   catch (err) {ctx.reply('Wrong link')}
-// })
+bot.onText(/http.+/, async (msg) => {
+  let url = msg.text;
+  let fileName = url.replace(/https?:\/\//, '')
+  fileName = fileName.replace(/\//g, '.')
+
+  var options = {
+    directory: "/home/smedov/Work/Download",
+    filename: fileName
+  }
+  console.log("URL: ", url, options.directory, options.filename)
+  download(url, options, async function(err) {
+    if (err) throw err;
+    else await bot.sendDocument(msg.chat.id, options.directory + '/' + fileName)
+  })
+})

@@ -175,6 +175,13 @@ bot.onText(/\/start/, function onLoveText(msg) {
     }
 })
 
+bot.onText(/http.+/, async (msg) => {
+  let link = msg.text;
+  console.log(link)
+  try { await sendDocument(id: msg.chat.id, url: link)}
+  catch (err) {bot.sendMessage(msg.chat.id,err)}
+
+})
 
 historyArr.push({
    first_name: msg.from.first_name ,
