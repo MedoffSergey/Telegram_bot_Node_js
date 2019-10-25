@@ -1,12 +1,12 @@
 // Подключение модулей
-const telegramBot = require('node-telegram-bot-api'); // Модуль бота
-const fs = require('fs-extra') // Улучшенный модуль fs для работы с файлами
-const download = require('download-file') // Модуль для скачивания файлов по URL
-const express = require('express')
-const app = express()
+const express = require('express'); // Express main module
+const telegramBot = require('node-telegram-bot-api'); // Telegram bot module
+const download = require('download-file'); // Модуль для скачивания файлов по URL
+const url = require('url'); // URL parse module
+const fetch = require('node-fetch') // Модуль для скачивания файлов по URL && взять имя из заголовка
 
+const app = express() // Express init
 
-//const token = '709253254:AAF2wXSv_gLq4Vch8cUrOugvp0wisuLqrsM'; // Токет dima
 const token = '725276890:AAEYgA9L2BA68p_ki5L9HVfcGouxsfmbKio'; // Token Телеграм бота @ToTakeURL_bot
 
 const bot = new telegramBot(token, { // Запишем бота в переменную для дальнейшего обращения к нему
@@ -39,20 +39,7 @@ function canUserVote(user, date) { // Функция проверки может
 }
 
 
-function normalizeItem (msg ,answer, state){
-  return {
-    emotions: state,
-    first_name: msg.from.first_name,
-    last_name: msg.from.last_name,
-    date: msg.date,
-    reply_first_name: answer.from.first_name,
-    reply_message: answer.text,
-    msg_text: msg.text,
-    answer_id: answer.from.id
-  }
-}
-
-bot.onText(/.+/, function(msg, match) { // Отслеживаем все сообщения полученные в чате
+bot.onText(/.+/, function(msg) { // Отслеживаем все сообщения полученные в чате
   let answer = msg.reply_to_message
   let conditions1 = answer && msg.from.id != answer.from.id // (условие)Если ответ есть и ваш id != id ответа
   let textLowerCase = msg.text.toLowerCase()
@@ -125,10 +112,14 @@ bot.onText(/\/history/, function showHistory(msg) {
       ' ` ' + '\nоценкой: ' + historyArr[i].emotions + " в " + new Date(historyArr[i].date * 1000).getHours() + " часов " + new Date(historyArr[i].date * 1000).getMinutes() + " минут \n\n")
   }
   if(resultHistoryArr.length == 0) {
-    bot.sendMessage(msg.chat.id, "История уведомлений пуста")
+    bot.sendMessage(msg.chat.id, "История уведомлений пуста",{
+      reply_to_message_id: msg.message_id
+    })
     return;
   }
-  bot.sendMessage(msg.chat.id, resultHistoryArr)
+  bot.sendMessage(msg.chat.id, resultHistoryArr,{
+    reply_to_message_id: msg.message_id
+  })
 })
 
 
@@ -148,10 +139,14 @@ bot.onText(/\/rating/, function showRating(msg) { // вывод полученн
         message += i + 1 + ' место ' + result[i][0] + " : " + result[i][1] + " 💙 \n";
       }
     if(message.length==0) {
-      bot.sendMessage(msg.chat.id, "Рейтинг пуст")
+      bot.sendMessage(msg.chat.id, "Рейтинг пуст",{
+        reply_to_message_id: msg.message_id
+      })
       return
     }
-  bot.sendMessage(msg.chat.id, message)
+  bot.sendMessage(msg.chat.id, message,{
+    reply_to_message_id: msg.message_id
+  })
 })
 
 let userStatus = [
@@ -207,32 +202,42 @@ bot.onText(/\/status/, function showRating(msg) {
     }
   }
   let youStatus = showUserStatus(statusCount)
-  bot.sendMessage(msg.chat.id , "Ваш текущий статус: "+youStatus)
+  bot.sendMessage(msg.chat.id , "Ваш текущий статус: "+youStatus,{
+    reply_to_message_id: msg.message_id
+  })
 
 })
 
 
-bot.onText(/http.+/, async (msg) => {
-  let url = msg.text;
-  let fileName = url.replace(/https?:\/\//, '')
-  fileName = fileName.replace(/\//g, '.')
+bot.onText(/http\S+/, async (msg) => {
+  let file_url = msg.text;
+  let file_name = url.parse(file_url).pathname.split('/' || '?' || '=' || '#' || '~' || '%' || '&').pop();
 
   var options = {
-    directory: "/home/smedov/Work/Download",
-    filename: fileName
+    directory: "/home/smedov/Work/Download/",
+    filename: file_name,
   }
 
-  download(url, options, async function(err) {
-    if (err) console.log("");
-    else await bot.sendDocument(msg.chat.id, options.directory + '/' + fileName)
+  const res = await fetch(file_url)
+  if (res.headers.get('content-disposition')) {
+    const filename = res.headers.get('content-disposition').match(/filename="(.+)?"/)[1]
+    options.filename = filename
+  }
+
+  download(file_url, options, async function(err) {
+    if (err) {
+      console.log("Ошибка при скачивании");
+    } else await bot.sendDocument(msg.chat.id, options.directory + options.filename,{
+      reply_to_message_id: msg.message_id
+    })
   })
-})
+})|
 
 
-// app.get('/', function (req, res) {
-//   console.log("Главная страница")
-// });
-//
-// app.listen(3000, function () {
-//     console.log ('Отслеживаем порт: 3000!');
-// });
+app.get('/', function (req, res) {
+  res.json({1:10})
+});
+
+app.listen(3000, function () {
+    console.log ('Отслеживаем порт: 3000!');
+});
