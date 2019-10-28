@@ -4,8 +4,10 @@ const telegramBot = require('node-telegram-bot-api'); // Telegram bot module
 const download = require('download-file'); // Модуль для скачивания файлов по URL
 const url = require('url'); // URL parse module
 const fetch = require('node-fetch') // Модуль для скачивания файлов по URL && взять имя из заголовка
+var cors = require('cors') // соеденить vue и node
 
 const app = express() // Express init
+app.use(cors())
 
 const token = '725276890:AAEYgA9L2BA68p_ki5L9HVfcGouxsfmbKio'; // Token Телеграм бота @ToTakeURL_bot
 
@@ -19,10 +21,11 @@ function linkToChat() { // Функция cвязываем бота с чато
 linkToChat();
 
 // Глобальные переменные для хранения в них данных
-let like = [];                // Массив для хранения лайков
-let dislike = [];             // Массив для хранения дизлайков
+let userOption = [];                // Массив для хранения лайков
+
 let historyArr = [];          // Массив для хранения истории уведомлений
 let ratingController = {};
+let rating = {};
 
 
 function canUserVote(user, date) { // Функция проверки может ли пользователь проголосовать
@@ -60,15 +63,16 @@ bot.onText(/.+/, function(msg) { // Отслеживаем все сообщен
       msg_text: msg.text,
       answer_id: answer.from.id
     }
-    const ratingInfo = {answer_id : answer.from.id ,answer_name: answer.from.first_name}
-
+    let ratingInfo = {}
       if ((msg.text === "+" || textLowerCase === "спасибо" || textLowerCase === "спс" || msg.text === "👍") && canUserVote(userId, msg.date)) {
-        pushParams.emotions = 'Положительно',
-        like.push(ratingInfo)
+        pushParams.emotions = '1',
+        ratingInfo = {answer_id : answer.from.id ,answer_name: answer.from.first_name , emotions:pushParams.emotions }
+        userOption.push(ratingInfo )
       }
       if ((msg.text === "-" || textLowerCase === "дизлайк" || textLowerCase === "нет" || msg.text === "👎") && canUserVote(userId, msg.date)) {
-        pushParams.emotions = 'Отрицательно',
-        dislike.push(ratingInfo)
+        pushParams.emotions = '-1',
+        ratingInfo = {answer_id : answer.from.id ,answer_name: answer.from.first_name , emotions:pushParams.emotions}
+        userOption.push(ratingInfo )
       }
 
       if(pushParams.emotions){
@@ -82,25 +86,13 @@ bot.onText(/.+/, function(msg) { // Отслеживаем все сообщен
 })
 
 
-function countFunc(like, dislike) { //функция подсчета лайков и дизлайков
-  let finalRating = {};
-
-  for (let i = 0; i < like.length; i++) {
-    if (finalRating[like[i].answer_id] === undefined) {
-      finalRating[like[i].answer_name] = 1;
-    } else {
-      finalRating[like[i].answer_name]++;
-    }
-  }
-  for (let i = 0; i < dislike.length; i++) {
-    if (finalRating[dislike[i].answer_id] === undefined) {
-      finalRating[dislike[i].answer_name] = -1;
-    } else {
-      finalRating[dislike[i].answer_name]--;
-    }
-  }
-
-  return finalRating //возвращаем результат подсчета лайков и дизлайков
+function countFunc (userOption) {
+  userOption.reduce((summary, vote)=>{
+      const {answer_name, emotions} = vote;
+      if(!summary[answer_name]) summary[answer_name] = 0;
+      summary[answer_name] += emotions == 1 ? 1 : -1;
+      return summary;
+  }, {})
 }
 
 
@@ -124,7 +116,7 @@ bot.onText(/\/history/, function showHistory(msg) {
 
 
 bot.onText(/\/rating/, function showRating(msg) { // вывод полученных данных в телеграмме по команде /rating
-      let object = countFunc(like, dislike)
+      let object = countFunc(userOption)
 
       let result = [];
       for (let name in object) {
@@ -134,10 +126,20 @@ bot.onText(/\/rating/, function showRating(msg) { // вывод полученн
         return b[1] - a[1];
       });
 
-      let message = ""
+      let message = "";
+      let jsonMessage = [];
+
+
       for (let i = 0; i < result.length; i++) {
         message += i + 1 + ' место ' + result[i][0] + " : " + result[i][1] + " 💙 \n";
+        jsonMessage.push(i + 1 + ' место ' + result[i][0] + " : " + result[i][1] ) ;
       }
+      if (rating){
+        rating = {}
+        rating = jsonMessage
+      }
+
+
     if(message.length==0) {
       bot.sendMessage(msg.chat.id, "Рейтинг пуст",{
         reply_to_message_id: msg.message_id
@@ -231,11 +233,27 @@ bot.onText(/http\S+/, async (msg) => {
       reply_to_message_id: msg.message_id
     })
   })
-})|
+})
 
 
-app.get('/', function (req, res) {
-  res.json({1:10})
+
+
+app.get('/rating', function (req, res) {
+  if(rating.length!=0){
+    res.json(rating)
+  }
+  else {
+    res.send('200 OK')
+  }
+});
+
+app.get('/history', function (req, res) {
+  if(rating.length!=0){
+    res.json(rating)
+  }
+  else {
+    res.send('200 OK')
+  }
 });
 
 app.listen(3000, function () {
