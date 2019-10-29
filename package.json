@@ -3,16 +3,23 @@
     "version": "1.0.0",
     "description": "project using gulp4",
     "author": "Medov Sergei",
-    "devDependencies": {},
+    "devDependencies": {
+        "eslint": "^6.5.1"
+    },
     "dependencies": {
         "core-util-is": "^1.0.2",
+        "cors": "^2.8.5",
         "domurl": "^2.2.0",
+        "download-file": "^0.1.5",
         "ejs": "^2.6.2",
         "express": "^4.17.1",
+        "fs-extra": "^8.1.0",
         "json": "^9.0.6",
+        "node-fetch": "^2.6.0",
         "node-telegram-bot-api": "^0.30.0",
         "pjson": "^1.0.9",
         "pug": "^2.0.4",
-        "request": "^2.88.0"
+        "request": "^2.88.0",
+        "url": "^0.11.0"
     }
 }

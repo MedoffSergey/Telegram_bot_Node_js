@@ -25,7 +25,7 @@ let userOption = [];                // Массив для хранения ла
 
 let historyArr = [];          // Массив для хранения истории уведомлений
 let ratingController = {};
-let rating = {};
+
 
 
 function canUserVote(user, date) { // Функция проверки может ли пользователь проголосовать
@@ -48,20 +48,17 @@ bot.onText(/.+/, function(msg) { // Отслеживаем все сообщен
   let textLowerCase = msg.text.toLowerCase()
   let userId = msg.from.id
 
-
-  // const ratingMessageType = ;//
-  //
-  // if(ratingMessageType === null ) return;
-
   if (conditions1) {
     const pushParams = {
       first_name: msg.from.first_name,
       last_name: msg.from.last_name,
       date: msg.date,
       reply_first_name: answer.from.first_name,
+      reply_last_name: answer.from.last_name,
       reply_message: answer.text,
       msg_text: msg.text,
-      answer_id: answer.from.id
+      answer_id: answer.from.id,
+      answer_name: answer.from.first_name
     }
     let ratingInfo = {}
       if ((msg.text === "+" || textLowerCase === "спасибо" || textLowerCase === "спс" || msg.text === "👍") && canUserVote(userId, msg.date)) {
@@ -86,18 +83,24 @@ bot.onText(/.+/, function(msg) { // Отслеживаем все сообщен
 })
 
 
-function countFunc (userOption) {
-  userOption.reduce((summary, vote)=>{
-      const {answer_name, emotions} = vote;
-      if(!summary[answer_name]) summary[answer_name] = 0;
-      summary[answer_name] += emotions == 1 ? 1 : -1;
-      return summary;
-  }, {})
+
+
+
+
+function groupVotesByUser (userOption) {  //функция подсчета лайков и дизлайков у пользователей
+  return userOption.reduce(function (summary, vote) {
+      const {answer_id, emotions} = vote;   // Деструктурирующее присваивание      https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
+      if(summary[answer_id] === undefined) summary[answer_id] = 0;
+      summary[answer_id] += emotions == 1 ? 1 : -1;
+      return summary; // вернем сумму пользователя
+    }, {}) // Обьявляем обьект в начальной значение reduce
 }
 
 
+let resultHistoryArr
+
 bot.onText(/\/history/, function showHistory(msg) {
-  let resultHistoryArr = ''
+  resultHistoryArr = ''
 
   for (let i = 0; i < historyArr.length; i++) {
     resultHistoryArr += ("Пользователь " + historyArr[i].first_name + ' ' + historyArr[i].last_name + " оценил коментарий пользователя " + historyArr[i].reply_first_name + ':' + '` ' + historyArr[i].reply_message +
@@ -114,42 +117,46 @@ bot.onText(/\/history/, function showHistory(msg) {
   })
 })
 
-
-bot.onText(/\/rating/, function showRating(msg) { // вывод полученных данных в телеграмме по команде /rating
-      let object = countFunc(userOption)
-
-      let result = [];
-      for (let name in object) {
-        result.push([name, object[name]]);
-      }
-      result.sort(function(a, b) {
-        return b[1] - a[1];
-      });
-
-      let message = "";
-      let jsonMessage = [];
-
-
-      for (let i = 0; i < result.length; i++) {
-        message += i + 1 + ' место ' + result[i][0] + " : " + result[i][1] + " 💙 \n";
-        jsonMessage.push(i + 1 + ' место ' + result[i][0] + " : " + result[i][1] ) ;
-      }
-      if (rating){
-        rating = {}
-        rating = jsonMessage
-      }
-
-
-    if(message.length==0) {
-      bot.sendMessage(msg.chat.id, "Рейтинг пуст",{
-        reply_to_message_id: msg.message_id
-      })
-      return
+function seekNameByID(id) {
+    for (let i = 0; i < historyArr.length; i++) {
+        if (historyArr[i].answer_id == id) {
+            return historyArr[i].answer_name
+        }
     }
-  bot.sendMessage(msg.chat.id, message,{
+    return  null
+}
+
+bot.onText(/\/rating/, function ratingShow(msg) {
+  let rating = groupVotesByUser(userOption) // получается { '311805730': 1, '375240230': -1 }
+  let result = [];
+  for (let id in rating) {
+    result.push({
+      id: id,
+      sum: rating[id]
+    });
+  } // получается  [ { id: '311805730', sum: 1 }, { id: '375240230', sum: -1 } ]
+  result.sort(function(a, b) {
+    return b.sum - a.sum;
+  });
+
+  let message = "";
+
+  for (let i = 0; i < result.length; i++) {
+    const id = result[i].id;
+    const userName = seekNameByID(id);
+    message += i + 1 + ' место ' + userName + ":  " + result[i].sum + " 💙 \n";
+  }
+  if (message.length == 0) {
+    bot.sendMessage(msg.chat.id, "Рейтинг пуст", {
+      reply_to_message_id: msg.message_id
+    })
+    return
+  }
+  bot.sendMessage(msg.chat.id, message, {
     reply_to_message_id: msg.message_id
   })
 })
+
 
 let userStatus = [
   {
@@ -239,21 +246,26 @@ bot.onText(/http\S+/, async (msg) => {
 
 
 app.get('/rating', function (req, res) {
-  if(rating.length!=0){
-    res.json(rating)
+  let rating = groupVotesByUser(userOption);
+  let result = [];
+  for (let id in rating) {
+      result.push({
+          id: id,
+          sum: rating[id],
+          name: seekNameByID(id)
+      });
   }
-  else {
-    res.send('200 OK')
-  }
+  result.sort(function(a, b) {
+      return b.sum - a.sum;
+  });
+  res.json({
+      sortRating: result
+  });
 });
 
 app.get('/history', function (req, res) {
-  if(rating.length!=0){
-    res.json(rating)
-  }
-  else {
-    res.send('200 OK')
-  }
+    console.log(historyArr)
+    res.json(historyArr)
 });
 
 app.listen(3000, function () {
