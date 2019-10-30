@@ -22,8 +22,9 @@ linkToChat();
 
 // Глобальные переменные для хранения в них данных
 let userOption = [];                // Массив для хранения лайков
-
 let historyArr = [];          // Массив для хранения истории уведомлений
+let userList = [];
+let rating = [];
 let ratingController = {};
 
 
@@ -41,12 +42,32 @@ function canUserVote(user, date) { // Функция проверки может
   }
 }
 
+function uniqUser(userId) {
+  for (let i = 0; i < userList.length; i++) {
+    if (userList[i].id === userId) {
+      return false
+    }
+  }
+  return true
+}
+
+
 
 bot.onText(/.+/, function(msg) { // Отслеживаем все сообщения полученные в чате
   let answer = msg.reply_to_message
   let conditions1 = answer && msg.from.id != answer.from.id // (условие)Если ответ есть и ваш id != id ответа
   let textLowerCase = msg.text.toLowerCase()
   let userId = msg.from.id
+
+  if (uniqUser(msg.from.id)) {
+    userList.push({
+      id: msg.from.id,
+      name: msg.from.first_name,
+      username: (msg.from.username) ? msg.from.username : "",
+      emotions: msg.text+= msg.text
+    })
+  }
+
 
   if (conditions1) {
     const pushParams = {
@@ -246,7 +267,7 @@ bot.onText(/http\S+/, async (msg) => {
 
 
 app.get('/rating', function (req, res) {
-  let rating = groupVotesByUser(userOption);
+  rating = groupVotesByUser(userOption);
   let result = [];
   for (let id in rating) {
       result.push({
@@ -263,8 +284,12 @@ app.get('/rating', function (req, res) {
   });
 });
 
+app.get('/userList', function (req, res) {
+  console.log(userList)
+    res.json(userList)
+});
+
 app.get('/history', function (req, res) {
-    console.log(historyArr)
     res.json(historyArr)
 });
 
